@@ -99,7 +99,7 @@ def load_airbnb(df, features=None, label="Price_Night"):
 
 
 def save_model(
-    model, hyperparameters, metrics, folder="models/regression/linear_regression"
+    model, metrics, hyperparameters=None, folder="models/regression/linear_regression"
 ):
     # Create directory if it does not exist
     os.makedirs(folder, exist_ok=True)
@@ -112,9 +112,13 @@ def save_model(
     # Save the model
     joblib.dump(model, model_path)
 
-    # Save hyperparameters
-    with open(hyperparameters_path, "w") as hp_file:
-        json.dump(hyperparameters, hp_file, indent=4)
+    # Save hyperparameters if they exist
+    if hyperparameters is not None:
+        with open(hyperparameters_path, "w") as hp_file:
+            json.dump(hyperparameters, hp_file, indent=4)
+
+    # Ensure metrics are serializable
+    metrics = {k: float(v) for k, v in metrics.items()}
 
     # Save metrics
     with open(metrics_path, "w") as metrics_file:
