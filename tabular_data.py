@@ -99,15 +99,19 @@ def load_airbnb(df, features=None, label="Price_Night"):
 
 
 def save_model(
-    model, metrics, hyperparameters=None, folder="models/regression/linear_regression"
+    model,
+    model_name,
+    metrics,
+    hyperparameters=None,
+    folder="models/regression/linear_regression",
 ):
     # Create directory if it does not exist
     os.makedirs(folder, exist_ok=True)
 
     # Paths for the files
-    model_path = os.path.join(folder, "model.joblib")
-    hyperparameters_path = os.path.join(folder, "hyperparameters.json")
-    metrics_path = os.path.join(folder, "metrics.json")
+    model_path = os.path.join(folder, f"{model_name}.joblib")
+    hyperparameters_path = os.path.join(folder, f"{model_name}_hyperparameters.json")
+    metrics_path = os.path.join(folder, f"{model_name}_metrics.json")
 
     # Save the model
     joblib.dump(model, model_path)
@@ -124,7 +128,7 @@ def save_model(
     with open(metrics_path, "w") as metrics_file:
         json.dump(metrics, metrics_file, indent=4)
 
-    print(f"Model and associated data saved in {folder}")
+    print(f"Model and associated data saved in {folder} under the name {model_name}")
 
 
 if __name__ == "__main__":
