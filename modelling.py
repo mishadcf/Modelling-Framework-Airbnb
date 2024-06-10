@@ -50,7 +50,7 @@ def train_baseline_model():
     )
 
     baseline_metrics = {
-        "rmse_trai": rmse_train,
+        "rmse_train": rmse_train,
         "rmse_testing": rmse_testing,
         "r2_test": r2_test,
         "r2_train": r2_train,
@@ -58,7 +58,7 @@ def train_baseline_model():
 
     print(baseline_metrics)
 
-    return sgd_regressor_baseline
+    return sgd_regressor_baseline, baseline_metrics
 
 
 # %%
@@ -70,7 +70,7 @@ def train_scaled_baseline_model():
     features = ["beds", "bathrooms"]
 
     # Assuming load_airbnb function extracts the required features and target from the dataframe
-    data = load_airbnb(df, features=features)
+    data = tabular_data.load_airbnb(df, features=features)
     X = data[:, :-1]
     y = data[:, -1]
 
@@ -98,7 +98,7 @@ def train_scaled_baseline_model():
     r2_train = r2_score(y_train, y_pred_train)
     r2_test = r2_score(y_test, y_pred_test)
 
-    # Print or return the metrics
+    # Metrics dictionary
     metrics = {
         "rmse_train": rmse_train,
         "rmse_test": rmse_test,
@@ -106,12 +106,8 @@ def train_scaled_baseline_model():
         "r2_test": r2_test,
     }
 
-    print(metrics)
-
-    # Return the trained pipeline
-    return pipeline
-
-    # %%
+    # Return both the model (pipeline) and the metrics
+    return pipeline, metrics
 
 
 # TASK 3
