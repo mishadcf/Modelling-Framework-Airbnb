@@ -47,9 +47,27 @@ def set_default_feature_values(df):
 def clean_tabular_data(df):
     df.drop(columns="Unnamed: 19", inplace=True)
     df = remove_rows_with_missing_ratings(df)
-    df["Description"].apply(lambda x: convert_string(x))
+    df["Description"] = df["Description"].apply(lambda x: convert_string(x))
     df = set_default_feature_values(df)
+    numeric_columns = [
+        "guests",
+        "beds",
+        "bathrooms",
+        "Price_Night",
+        "Cleanliness_rating",
+        "Accuracy_rating",
+        "Communication_rating",
+        "Location_rating",
+        "Check-in_rating",
+        "Value_rating",
+        "amenities_count",
+        "bedrooms",
+    ]
 
+    for col in numeric_columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df["guests"] = df["guests"].fillna(df["guests"].median())
     return df
 
 
@@ -83,7 +101,7 @@ def load_airbnb(df, features=None, label="Price_Night"):
     """
 
     if not features:
-        features = ["beds", "bathrooms", "Amenities"]
+        features = ["beds", "bathrooms", "amenities_count"]
 
     if not set(features).issubset(df.columns) or label not in df.columns:
         raise ValueError(
