@@ -130,8 +130,6 @@ def custom_tune_regression_model_hyperparameters(
 ):
     """Returns best hyperparams, associated performance metrics, including RMSE"""
 
-    # might need to be tweaked later, add more metricss  and scaling
-
     data = pd.load_csv("tabular_data/clean_tabular_data.csv")
 
     # This will hold all the different dictionaries of hyperparamater combos
@@ -267,10 +265,78 @@ def evaluate_all_models(data_path):
         )
 
 
-# %%
-
-
 # inear_regression - Best Params: {'alpha': 0.001, 'eta0': 0.01, 'learning_rate': 'invscaling', 'loss': 'squared_error', 'max_iter': 1500, 'penalty': 'elasticnet', 'tol': 0.001}, RMSE Train: 72658455692.03978, RMSE Val: 77580120297.01427, RMSE Test: 75679539065.08081, R^2 Train: -3.810938766951986e+17, R^2 Val: -3.419753101869649e+17, R^2 Test: -3.6205269061980186e+17
 # decision_tree - Best Params: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 10}, RMSE Train: 80.66333097253349, RMSE Val: 123.97721257101884, RMSE Test: 122.58391443865915, R^2 Train: 0.5303093131052374, R^2 Val: 0.12667158619858587, R^2 Test: 0.05009145672259685
 # random_forest - Best Params: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 10, 'n_estimators': 10}, RMSE Train: 86.73798547685186, RMSE Val: 109.91316022490382, RMSE Test: 113.90600496702822, R^2 Train: 0.45690187016266404, R^2 Val: 0.31357475950443225, R^2 Test: 0.1798220999103557
 # gradient_boosting - Best Params: {'learning_rate': 0.01, 'max_depth': 3, 'min_samples_leaf': 4, 'min_samples_split': 2, 'n_estimators': 200}, RMSE Train: 82.03983010076168, RMSE Val: 114.45516638635922, RMSE Test: 117.78616851558763, R^2 Train: 0.5141422335230738, R^2 Val: 0.2556714852193005, R^2 Test: 0.12299228810454987
+
+
+import os
+import json
+import joblib
+
+
+def find_best_model(models_dir):
+    best_r2_val = -float("inf")
+    best_model_info = None
+
+    # Iterate over each model directory in the parent directory
+    for model_name in os.listdir(models_dir):
+        model_dir = os.path.join(models_dir, model_name)
+
+        print(f"Checking directory: {model_dir}")
+
+        # Ensure it's a directory
+        if os.path.isdir(model_dir):
+            metrics_file = os.path.join(model_dir, f"{model_name}_metrics.json")
+            model_file = os.path.join(model_dir, f"{model_name}.joblib")
+
+            print(f"Looking for metrics file: {metrics_file}")
+            print(f"Looking for model file: {model_file}")
+
+            # Check if both model_name_metrics.json and model_name.joblib exist
+            if os.path.exists(metrics_file) and os.path.exists(model_file):
+                print(f"Found metrics file: {metrics_file}")
+                print(f"Found model file: {model_file}")
+
+                # Load the metrics
+                try:
+                    with open(metrics_file, "r") as f:
+                        metrics = json.load(f)
+                    print(f"Metrics for {model_name}: {metrics}")
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON for {model_name}: {e}")
+                    continue
+
+                # Extract the validation R^2 score
+                r2_val = metrics.get("r2_val", -float("inf"))
+
+                print(f"Found r2_val: {r2_val} for model {model_name}")
+
+                # Update the best model if this one is better
+                if r2_val > best_r2_val:
+                    best_r2_val = r2_val
+                    best_model_info = {
+                        "model_name": model_name,
+                        "model_file": model_file,
+                        "metrics": metrics,
+                    }
+
+    # Load the best model
+    if best_model_info:
+        best_model = joblib.load(best_model_info["model_file"])
+        print(
+            f"The best model is {best_model_info['model_name']} with validation RMSE {best_model_info['metrics']['rmse_val']} and validation R^2 {best_model_info['metrics']['r2_val']}"
+        )
+        return best_model
+    else:
+        print("No models found.")
+        return None
+
+
+# %%
+if __name__ == "__main__":
+    evaluate_all_models("tabular_data/clean_tabular_data.csv")
+    find_best_model("models/regression")
+
+# %%
