@@ -1,33 +1,14 @@
-# %%
-# TASK 2
-# Import standard libraries
 import pandas as pd
 import numpy as np
-import sklearn.metrics
-import sklearn.model_selection
-from utils import load_airbnb, load_data_all_steps
+import itertools
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+from sklearn.metrics import mean_squared_error, r2_score, make_scorer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import SGDRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import mean_squared_error, r2_score
-import itertools
-
-
-# %%
-# TASK 2
-# Import standard libraries
-import pandas as pd
-import numpy as np
-import sklearn.metrics
-import sklearn.model_selection
-from utils import load_airbnb, load_data_all_steps
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import SGDRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import mean_squared_error, r2_score
-import itertools
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.tree import DecisionTreeRegressor
+from utils import load_airbnb, load_data_all_steps, save_regression_model
 
 
 def calculate_metrics(model, X_train, y_train, X_val, y_val, X_test, y_test):
@@ -122,20 +103,6 @@ def train_scaled_baseline_model(X_train, y_train, X_val, y_val, X_test, y_test):
 #   'r2_train': 0.28031904552127795,
 #   'r2_test': 0.20166474098723153})  - results
 
-# %%
-# Import standard libraries
-import pandas as pd
-import numpy as np
-import sklearn.metrics
-import sklearn.model_selection
-from utils import load_airbnb, load_data_all_steps
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import SGDRegressor
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import mean_squared_error, r2_score
-import itertools
-
 
 def tune_regression_model_hyperparameters(
     model, params, X_train, y_train, X_val, y_val, X_test, y_test
@@ -156,17 +123,6 @@ def tune_regression_model_hyperparameters(
     )
 
     return gs.best_params_, best_metrics
-
-
-# metrics = {'rmse_train': 99.84818675767644,
-#   'rmse_test': 112.37902088188919,
-#   'rmse_val': 107.79097585704393,
-#   'r2_val': 0.33982562616789,
-#   'r2_train': 0.28031904552127795,
-#   'r2_test': 0.20166474098723153})  - results
-
-
-# TASK 3
 
 
 def custom_tune_regression_model_hyperparameters(
@@ -215,14 +171,6 @@ def custom_tune_regression_model_hyperparameters(
     return best_combo, best_RMSE
 
 
-# %%
-# TASK 4
-
-
-from sklearn.metrics import make_scorer, mean_squared_error
-from sklearn.model_selection import GridSearchCV
-
-
 def tune_regression_model_hyperparameters(
     model, params, X_train, y_train, X_val, y_val, X_test, y_test
 ):
@@ -248,23 +196,6 @@ def tune_regression_model_hyperparameters(
 
     return best_hyperparameters, best_metrics
 
-
-# %%
-
-# Task 5
-
-# Improve the performance of the model by using different models provided by sklearn.
-
-# Use decision trees, random forests, and gradient boosting. Make sure you use the regression versions of each of these models, as many have classification counterparts with similar names.
-
-# It's extremely important to apply your tune_regression_model_hyperparameters function to each of these to tune their hyperparameters before evaluating them. Because the sklearn API is the same for every model, this should be as easy as passing your model class into your function.
-
-# Save the model, hyperparameters, and metrics in a folder named after the model class. For example, save your best decision tree in a folder called models/regression/decision_tree.
-
-# Define all of the code to do this in a function called evaluate_all_models
-
-# Call this function inside your if __name__ == "__main__" block.
-#
 
 # %%
 from utils import load_airbnb, save_regression_model
@@ -368,4 +299,80 @@ def evaluate_all_models():  # Needs to be altered to take in all x's and y's, al
         )
 
 
+def evaluate_all_models(data_path):
+    # Load data
+    X_train, y_train, X_val, y_val, X_test, y_test = load_data_all_steps(data_path)
+
+    # Define models and their parameter grids
+    models = {
+        "linear_regression": SGDRegressor(),
+        "decision_tree": DecisionTreeRegressor(),
+        "random_forest": RandomForestRegressor(),
+        "gradient_boosting": GradientBoostingRegressor(),
+    }
+
+    param_grids = {
+        "linear_regression": {
+            "loss": ["squared_error"],
+            "penalty": ["l2", "l1", "elasticnet"],
+            "alpha": [0.0001, 0.001, 0.01],
+            "learning_rate": ["constant", "optimal", "invscaling", "adaptive"],
+            "eta0": [0.01, 0.1, 1],
+            "max_iter": [1000, 1500, 2000],
+            "tol": [1e-3, 1e-4],
+        },
+        "decision_tree": {
+            "max_depth": [None, 10, 20, 30],
+            "min_samples_split": [2, 5, 10],
+            "min_samples_leaf": [1, 2, 4],
+        },
+        "random_forest": {
+            "n_estimators": [10, 50, 100],
+            "max_depth": [None, 10, 20, 30],
+            "min_samples_split": [2, 5, 10],
+            "min_samples_leaf": [1, 2, 4],
+        },
+        "gradient_boosting": {
+            "n_estimators": [100, 200, 300],
+            "learning_rate": [0.01, 0.1, 0.2],
+            "max_depth": [3, 5, 10],
+            "min_samples_split": [2, 5],
+            "min_samples_leaf": [1, 2, 4],
+        },
+    }
+
+    # Perform model evaluation
+    results = {}
+    for model_name, model in models.items():
+        print(f"Processing {model_name}")
+        param_grid = param_grids[model_name]
+
+        # Use the predefined function to tune hyperparameters and calculate metrics
+        best_params, best_metrics = tune_regression_model_hyperparameters(
+            model, param_grid, X_train, y_train, X_val, y_val, X_test, y_test
+        )
+
+        results[model_name] = {
+            "best_params": best_params,
+            "metrics": best_metrics,
+        }
+
+        # Save results and model
+        save_regression_model(model=model, model_name=model_name, metrics=best_metrics)
+
+    # Print results
+    for model_name, result in results.items():
+        print(
+            f"{model_name} - Best Params: {result['best_params']}, "
+            f"RMSE Train: {result['metrics']['rmse_train']}, RMSE Val: {result['metrics']['rmse_val']}, RMSE Test: {result['metrics']['rmse_test']}, "
+            f"R^2 Train: {result['metrics']['r2_train']}, R^2 Val: {result['metrics']['r2_val']}, R^2 Test: {result['metrics']['r2_test']}"
+        )
+
+
 # %%
+
+
+# inear_regression - Best Params: {'alpha': 0.001, 'eta0': 0.01, 'learning_rate': 'invscaling', 'loss': 'squared_error', 'max_iter': 1500, 'penalty': 'elasticnet', 'tol': 0.001}, RMSE Train: 72658455692.03978, RMSE Val: 77580120297.01427, RMSE Test: 75679539065.08081, R^2 Train: -3.810938766951986e+17, R^2 Val: -3.419753101869649e+17, R^2 Test: -3.6205269061980186e+17
+# decision_tree - Best Params: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 10}, RMSE Train: 80.66333097253349, RMSE Val: 123.97721257101884, RMSE Test: 122.58391443865915, R^2 Train: 0.5303093131052374, R^2 Val: 0.12667158619858587, R^2 Test: 0.05009145672259685
+# random_forest - Best Params: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 10, 'n_estimators': 10}, RMSE Train: 86.73798547685186, RMSE Val: 109.91316022490382, RMSE Test: 113.90600496702822, R^2 Train: 0.45690187016266404, R^2 Val: 0.31357475950443225, R^2 Test: 0.1798220999103557
+# gradient_boosting - Best Params: {'learning_rate': 0.01, 'max_depth': 3, 'min_samples_leaf': 4, 'min_samples_split': 2, 'n_estimators': 200}, RMSE Train: 82.03983010076168, RMSE Val: 114.45516638635922, RMSE Test: 117.78616851558763, R^2 Train: 0.5141422335230738, R^2 Val: 0.2556714852193005, R^2 Test: 0.12299228810454987
