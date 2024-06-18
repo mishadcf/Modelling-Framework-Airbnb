@@ -6,6 +6,7 @@ import ast
 import os
 import joblib
 import json
+from sklearn.model_selection import train_test_split
 
 
 def remove_rows_with_missing_ratings(df):
@@ -46,6 +47,9 @@ def set_default_feature_values(df):
 
 def clean_tabular_data(df):
     df.drop(columns="Unnamed: 19", inplace=True)
+    df.loc[df["Cleanliness_rating"] == 200, "Cleanliness_rating"] = (
+        5  # deals with 200 rating in cleanliness rating
+    )
     df = remove_rows_with_missing_ratings(df)
     df["Description"] = df["Description"].apply(lambda x: convert_string(x))
     df = set_default_feature_values(df)
@@ -68,21 +72,8 @@ def clean_tabular_data(df):
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df["guests"] = df["guests"].fillna(df["guests"].median())
+    df["bedrooms"] = df["bedrooms"].fillna(df["bedrooms"].median())
     return df
-
-
-def get_features_labels(df, features, label="Price_Night"):
-    # This function returns a list of tuples, each containing the values of the features and the corresponding label for each row
-
-    if not set(features).issubset(df.columns) or label not in df.columns:
-        raise ValueError("Either the feature of label is not in the DataFrame")
-
-    features_label_pairs = [
-        (tuple(getattr(row, f) for f in features), getattr(row, label))
-        for row in df.itertuples()
-    ]
-
-    return features_label_pairs
 
 
 def load_airbnb(df, features=None, label="Price_Night"):
@@ -101,7 +92,7 @@ def load_airbnb(df, features=None, label="Price_Night"):
     """
 
     if not features:
-        features = ["beds", "bathrooms", "amenities_count"]
+        features = ["bedrooms", "bathrooms", "amenities_count"]
 
     if not set(features).issubset(df.columns) or label not in df.columns:
         raise ValueError(
@@ -116,9 +107,20 @@ def load_airbnb(df, features=None, label="Price_Night"):
     return np.array(features_labels_list)
 
 
-import os
-import joblib
-import json
+def load_data_all_steps(path):
+    # to avoid writing this everytime
+    # remember, this uses load_aaribnb whchi defaults to features : ["bedrooms", "bathrooms", "amenities_count"]
+    data = pd.read_csv(path)
+    numpy_data = load_airbnb(data)
+    X = numpy_data[:, :-1]
+    y = numpy_data[:, -1]
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y, test_size=0.8, random_state=69
+    )
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.5, random_state=69
+    )
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 def save_regression_model(
@@ -147,13 +149,36 @@ def save_regression_model(
 
     print(metrics)
     # Ensure metrics are serializable
-    metrics = {k: float(v) for k, v in metrics.items()}
+    # metrics = {k: float(v) for k, v in metrics.items()}
 
     # Save metrics
     with open(metrics_path, "w") as metrics_file:
         json.dump(metrics, metrics_file, indent=4)
 
     print(f"Model and associated data saved in {folder} under the name {model_name}")
+
+
+def save_data_splits(
+    X_train, y_train, X_val, y_val, X_test, y_test, directory="data_splits"
+):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    np.save(os.path.join(directory, "X_train.npy"), X_train)
+    np.save(os.path.join(directory, "y_train.npy"), y_train)
+    np.save(os.path.join(directory, "X_val.npy"), X_val)
+    np.save(os.path.join(directory, "y_val.npy"), y_val)
+    np.save(os.path.join(directory, "X_test.npy"), X_test)
+    np.save(os.path.join(directory, "y_test.npy"), y_test)
+
+
+def load_data_splits(directory="data_splits"):
+    X_train = np.load(os.path.join(directory, "X_train.npy"))
+    y_train = np.load(os.path.join(directory, "y_train.npy"))
+    X_val = np.load(os.path.join(directory, "X_val.npy"))
+    y_val = np.load(os.path.join(directory, "y_val.npy"))
+    X_test = np.load(os.path.join(directory, "X_test.npy"))
+    y_test = np.load(os.path.join(directory, "y_test.npy"))
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 if __name__ == "__main__":
