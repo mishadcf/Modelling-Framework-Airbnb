@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
 import itertools
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
+import os
+import joblib
+import json
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error, r2_score, make_scorer
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -269,11 +272,6 @@ def evaluate_all_models(data_path):
 # decision_tree - Best Params: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 10}, RMSE Train: 80.66333097253349, RMSE Val: 123.97721257101884, RMSE Test: 122.58391443865915, R^2 Train: 0.5303093131052374, R^2 Val: 0.12667158619858587, R^2 Test: 0.05009145672259685
 # random_forest - Best Params: {'max_depth': None, 'min_samples_leaf': 4, 'min_samples_split': 10, 'n_estimators': 10}, RMSE Train: 86.73798547685186, RMSE Val: 109.91316022490382, RMSE Test: 113.90600496702822, R^2 Train: 0.45690187016266404, R^2 Val: 0.31357475950443225, R^2 Test: 0.1798220999103557
 # gradient_boosting - Best Params: {'learning_rate': 0.01, 'max_depth': 3, 'min_samples_leaf': 4, 'min_samples_split': 2, 'n_estimators': 200}, RMSE Train: 82.03983010076168, RMSE Val: 114.45516638635922, RMSE Test: 117.78616851558763, R^2 Train: 0.5141422335230738, R^2 Val: 0.2556714852193005, R^2 Test: 0.12299228810454987
-
-
-import os
-import json
-import joblib
 
 
 def find_best_model(models_dir):
