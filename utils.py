@@ -7,6 +7,7 @@ import os
 import joblib
 import json
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 
 def remove_rows_with_missing_ratings(df):
@@ -107,13 +108,20 @@ def load_airbnb(df, features=None, label="Price_Night"):
     return np.array(features_labels_list)
 
 
-def load_data_all_steps(path):
+def load_data_all_steps(path, classifier=False):
     # to avoid writing this everytime
     # remember, this uses load_aaribnb whchi defaults to features : ["bedrooms", "bathrooms", "amenities_count"]
+
+    # if classifier:
+    #     from sklearn.preprocessing import LabelEncoder
+
     data = pd.read_csv(path)
     numpy_data = load_airbnb(data)
     X = numpy_data[:, :-1]
     y = numpy_data[:, -1]
+    if classifier:
+        encoder = LabelEncoder()
+        y = encoder.fit_transform(y)
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, test_size=0.8, random_state=69
     )
