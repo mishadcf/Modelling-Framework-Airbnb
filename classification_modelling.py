@@ -39,21 +39,24 @@ def train_baseline_logistic_regression(return_data=False):
         return logistic_model
 
 
-from sklearn.model_selection import GridSearchCV
-
-
 def tune_classification_model_hyperparameters(
     model, X_train, y_train, X_val, y_val, params_grid: dict
 ):
+    # Define multiple scoring functions with appropriate averaging for multi-class classification
     scoring = {
-        "accuracy": "accuracy",
-        "f1": "f1",
-        "precision": "precision",
-        "recall": "recall",
+        "accuracy": "accuracy",  # No change needed for accuracy
+        "f1": "f1_weighted",  # Using weighted to account for label imbalance
+        "precision": "precision_weighted",  # Using weighted to account for label imbalance
+        "recall": "recall_weighted",  # Using weighted to account for label imbalance
     }
 
+    # Using StratifiedKFold to ensure each fold reflects the class distribution
+    from sklearn.model_selection import StratifiedKFold
+
+    cv = StratifiedKFold(n_splits=5)
+
     gs = GridSearchCV(
-        model, param_grid=params_grid, cv=5, scoring=scoring, refit="accuracy"
+        model, param_grid=params_grid, cv=cv, scoring=scoring, refit="accuracy"
     )
     gs.fit(X_train, y_train)
 
@@ -66,8 +69,3 @@ def tune_classification_model_hyperparameters(
     }
 
     return gs.best_estimator_, results
-
-
-#     And it should return the best model, a dictionary of its best hyperparameter values, and a dictionary of its performance metrics.
-
-# The dictionary of performance metrics should include a key called "validation_accuracy", for the accuracy on the validation set, which is what you should use to select the best model.
