@@ -108,7 +108,7 @@ def load_airbnb(df, features=None, label="Price_Night"):
     return np.array(features_labels_list)
 
 
-def load_data_all_steps(path, classifier=False):
+def load_data_all_steps(path, classifier=False, features=None, label="Price_Night"):
     # to avoid writing this everytime
     # remember, this uses load_aaribnb whchi defaults to features : ["bedrooms", "bathrooms", "amenities_count"]
 
@@ -116,12 +116,20 @@ def load_data_all_steps(path, classifier=False):
     #     from sklearn.preprocessing import LabelEncoder
 
     data = pd.read_csv(path)
-    numpy_data = load_airbnb(data)
-    X = numpy_data[:, :-1]
-    y = numpy_data[:, -1]
+
     if classifier:
+        numpy_data = load_airbnb(data, features, label="Category")
+        X = numpy_data[:, :-1].astype(float)
+        y = numpy_data[:, -1]
+
         encoder = LabelEncoder()
         y = encoder.fit_transform(y)
+
+    else:
+        numpy_data = load_airbnb(data, features, label)
+        X = numpy_data[:, :-1].astype(float)
+        y = numpy_data[:, -1].astype(float)
+
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, test_size=0.8, random_state=69
     )
@@ -131,14 +139,18 @@ def load_data_all_steps(path, classifier=False):
     return X_train, y_train, X_val, y_val, X_test, y_test
 
 
-def save_regression_model(
-    model, model_name, metrics, hyperparameters=None, folder="models/regression/"
+def save_model(
+    model, model_name, metrics, model_type, hyperparameters=None, task_folder="models/"
 ):
+    # Validate model_type and set the folder path
+    if model_type not in ["regression", "classification"]:
+        raise ValueError("model_type must be 'regression' or 'classification'")
+
+    folder = os.path.join(task_folder, model_type)
+
     # Create directory if it does not exist
     model_folder = os.path.join(folder, model_name)
-    os.makedirs(
-        model_folder, exist_ok=True
-    )  # This ensures the full path for the model is created
+    os.makedirs(model_folder, exist_ok=True)
 
     # Paths for the files
     model_path = os.path.join(model_folder, f"{model_name}.joblib")
@@ -155,9 +167,11 @@ def save_regression_model(
         with open(hyperparameters_path, "w") as hp_file:
             json.dump(hyperparameters, hp_file, indent=4)
 
-    print(metrics)
-    # Ensure metrics are serializable
-    # metrics = {k: float(v) for k, v in metrics.items()}
+    # Convert all NumPy arrays in metrics to lists before saving
+    metrics = {
+        key: value.tolist() if isinstance(value, np.ndarray) else value
+        for key, value in metrics.items()
+    }
 
     # Save metrics
     with open(metrics_path, "w") as metrics_file:
@@ -187,6 +201,18 @@ def load_data_splits(directory="data_splits"):
     X_test = np.load(os.path.join(directory, "X_test.npy"))
     y_test = np.load(os.path.join(directory, "y_test.npy"))
     return X_train, y_train, X_val, y_val, X_test, y_test
+
+
+def convert_np_to_python(data):
+    if isinstance(data, np.ndarray):
+        return data.tolist()  # Convert arrays to list
+    elif isinstance(data, np.generic):
+        return data.item()  # Convert NumPy floats and ints to Python floats and ints
+    elif isinstance(data, dict):
+        return {k: convert_np_to_python(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [convert_np_to_python(v) for v in data]
+    return data
 
 
 if __name__ == "__main__":
