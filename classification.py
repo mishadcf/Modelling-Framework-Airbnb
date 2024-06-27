@@ -16,8 +16,9 @@ from sklearn.preprocessing import LabelEncoder
 
 def train_baseline_logistic_regression(return_data=False):
 
+    # don't think that will work (need category as label)
     X_train, y_train, X_val, y_val, X_test, y_test = load_data_all_steps(
-        classifier=True, label="Category", path="tabular_data/clean_tabular_data.csv"
+        classifier=True, path="tabular_data/clean_tabular_data.csv"
     )
 
     logistic_model = LogisticRegression(max_iter=10000)
