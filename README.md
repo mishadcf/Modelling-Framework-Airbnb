@@ -5,7 +5,8 @@ This project applies machine learning techniques to predict nightly prices of Ai
 
 ## Project Structure
 - **`EDA.ipynb`**: Exploratory Data Analysis to uncover insights from the data.
-- **`model_training.py`**: Scripts to train, tune, and evaluate predictive models.
+- **`regression.py`**: Scripts to train, tune, and evaluate regression models 
+- **`classification.py`**: Scripts to train, tune, and evaluate classification models 
 - **`utils.py`**: Utility functions for data handling and model management.
 - **`models/`**: Directory containing trained models and their metrics for easy access and reproducibility.
 
