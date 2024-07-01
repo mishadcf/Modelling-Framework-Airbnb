@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+import os
+import json
+import joblib
 from utils import load_airbnb, load_data_all_steps, save_model
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression
@@ -194,3 +197,4 @@ def find_best_model(models_dir):
 
 if __name__ == "__main__":
     evaluate_all_models_classification("tabular_data/clean_tabular_data.csv")
+    find_best_model(models_dir="./models/classification/")
