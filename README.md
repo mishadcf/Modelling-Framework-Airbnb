@@ -1,5 +1,19 @@
 # Modelling Airbnb listings
 
+## Overview
+This project applies machine learning techniques to predict nightly prices of Airbnb listings and classify listing categories using synthetic data. It includes a a Jupyter notebook for EDA and Python scripts that cover the complete data science workflow from exploratory data analysis (EDA) to model training, tuning, and evaluation.
+
+## Project Structure
+
+Project Structure
+- `EDA.ipynb`: Exploratory Data Analysis to uncover insights from the data.
+- `regression.py`: Scripts to train, tune, and evaluate regression models
+- `classification.py`: Scripts to train, tune, and evaluate classification models
+- `nn.py`: script for training the neural networks 
+- `utils.py`: Utility functions for data handling and model management.
+- `models/`: Directory containing trained models and their metrics for easy access and reproducibility.
+
+
 ## Technologies Used
 
 - Python
@@ -51,7 +65,7 @@ While the performance metrics may not be impressive due to the artificial nature
 - Conduct model evaluation and comparison
 - Utilize popular data science and machine learning libraries
 
-For detailed results and visualizations, please refer to the Jupyter notebooks and the `docs_photos/` directory.
+For detailed results and visualizations, please refer to the Jupyter notebooks 
 
 ## Future Improvements
 
@@ -60,6 +74,3 @@ For detailed results and visualizations, please refer to the Jupyter notebooks a
 - Explore ensemble methods and model stacking
 - Extend the neural network architecture for more complex tasks
 
-## Contact
-
-For any questions or feedback, please contact [Your Name] at [your.email@example.com].
