@@ -52,12 +52,18 @@ class AirbnbNightlyPriceRegressionDataset(Dataset):
 
 
 class AirbnbNN(nn.Module):
-    def __init__(self, num_features, hidden_dim1=128, hidden_dim2=64, output_dim=1):
+    def __init__(
+        self, num_features, hidden_layer_width=128, output_dim=1, config=False
+    ):  # update config Parameter to enable hyperparameters to be extracted from the yaml file.
         super().__init__()
         # Define layers
-        self.fc1 = nn.Linear(num_features, hidden_dim1)  # Input to first hidden layer
-        self.fc2 = nn.Linear(hidden_dim1, hidden_dim2)  # Second hidden layer
-        self.output = nn.Linear(hidden_dim2, output_dim)  # Output layer
+        self.fc1 = nn.Linear(
+            num_features, hidden_layer_width
+        )  # Input to first hidden layer
+        self.fc2 = nn.Linear(
+            hidden_layer_width, hidden_layer_width
+        )  # Second hidden layer
+        self.output = nn.Linear(hidden_layer_width, output_dim)  # Output layer
 
     def forward(self, x):
         x = F.relu(self.fc1(x))  # Activation function for hidden layer 1
