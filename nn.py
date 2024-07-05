@@ -5,6 +5,9 @@ import torch.nn.functional as F
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter("runs/AIRBNB_NN")
 
 
 data = pd.read_csv("tabular_data/clean_tabular_data.csv")
@@ -12,17 +15,9 @@ data = pd.read_csv("tabular_data/clean_tabular_data.csv")
 train_df, test_df = train_test_split(data, test_size=0.2, random_state=69)
 train_df, val_df = train_test_split(train_df, test_size=0.2, random_state=69)
 
-
-train_dataset = AirbnbNightlyPriceRegressionDataset(
-    train_df, target_column="Price_Night"
-)
-val_dataset = AirbnbNightlyPriceRegressionDataset(val_df, target_column="Price_Night")
-test_dataset = AirbnbNightlyPriceRegressionDataset(test_df, target_column="Price_Night")
-
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+train_df = train_df.reset_index(drop=True)
+val_df = val_df.reset_index(drop=True)
+test_df = test_df.reset_index(drop=True)
 
 
 class AirbnbNightlyPriceRegressionDataset(Dataset):
@@ -43,12 +38,12 @@ class AirbnbNightlyPriceRegressionDataset(Dataset):
             idx = idx.tolist()
 
         features = self.dataframe.select_dtypes(include=np.number).drop(
-            columns=[self.target_column]
+            columns=[self.target_column, "Unnamed: 0"]
         )
         features = features.iloc[idx].values
         features = torch.tensor(features, dtype=torch.float32)
 
-        label = self.dataframe.iloc[
+        label = self.dataframe.loc[
             idx, self.target_column
         ]  # last column as the price per night
         label = torch.tensor(label, dtype=torch.float32)
@@ -71,36 +66,69 @@ class AirbnbNN(nn.Module):
         return x
 
 
-# Assuming the number of numeric features in your dataset is known
 num_features = 11
 model = AirbnbNN(num_features)
 
 
-def train(model, data_loader=train_loader, num_epochs=10):
-    # Assuming the use of a simple optimizer and loss for example purposes
+train_dataset = AirbnbNightlyPriceRegressionDataset(
+    train_df, target_column="Price_Night"
+)
+val_dataset = AirbnbNightlyPriceRegressionDataset(val_df, target_column="Price_Night")
+test_dataset = AirbnbNightlyPriceRegressionDataset(test_df, target_column="Price_Night")
+
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+
+def train(model, train_loader, val_loader, num_epochs=10, writer=None):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
 
-    model.train()  # Set the model to training mode
-
     for epoch in range(num_epochs):
-        for features, labels in data_loader:
-            # Run the forward pass
+        model.train()  # Set the model to training mode
+        running_loss = 0.0
+
+        for features, labels in train_loader:
+            optimizer.zero_grad()  # Zero the gradients
             outputs = model(features)
             loss = criterion(
                 outputs, labels.unsqueeze(1)
-            )  # Assume labels are not batched
+            )  # Ensure label dimensions match output
 
-            # Just to check the forward pass, break out after the first batch
-            print("First batch processed. Output shape:", outputs.shape)
-            print("Loss on the first batch:", loss.item())
-            break  # Exit after first batch for this example
+            loss.backward()  # Backpropagate the loss
+            optimizer.step()  # Update model parameters
 
-        break  # Exit after first epoch for this example
+            running_loss += loss.item()  # Accumulate loss
 
+        avg_train_loss = running_loss / len(
+            train_loader
+        )  # Calculate average loss for the epoch
+        # print(f"Epoch {epoch+1}/{num_epochs}, Training Loss: {avg_train_loss:.4f}")
+        writer.add_scalar("Loss/Train", avg_train_loss, epoch)  # Log training loss
 
-# Example DataLoader (use the DataLoader you have prepared)
-# train_loader is already assumed to be defined
+        # Validation phase
+        model.eval()  # Set the model to evaluation mode
+        val_loss = 0.0
+        with torch.no_grad():  # Disable gradient computation during validation
+            for features, labels in val_loader:
+                outputs = model(features)
+                loss = criterion(outputs, labels.unsqueeze(1))
+                val_loss += loss.item()
+
+        avg_val_loss = val_loss / len(
+            val_loader
+        )  # Calculate average validation loss for the epoch
+        # print(f"Epoch {epoch+1}/{num_epochs}, Validation Loss: {avg_val_val_loss:.4f}")
+        writer.add_scalar("Loss/Validation", avg_val_loss, epoch)  # Log validation loss
+        print(
+            f"Epoch {epoch+1}/{num_epochs}, Training Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}"
+        )
+
+    print("Finished Training")
+
 
 # Call train function with the model, training DataLoader, and number of epochs
-train(model, train_loader, num_epochs=1)
+train(model, train_loader, val_loader, num_epochs=100, writer=writer)
+writer.close()
