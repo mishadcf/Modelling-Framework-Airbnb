@@ -1,29 +1,65 @@
-# Airbnb Listings Prediction Project
+# Modelling Airbnb listings
 
-## Overview
-This project applies machine learning techniques to predict nightly prices of Airbnb listings and classify listing categories using synthetic data. It includes a series of Jupyter notebooks and Python scripts that cover the complete data science workflow from exploratory data analysis (EDA) to model training, tuning, and evaluation.
+## Technologies Used
 
-## Project Structure
-- **`EDA.ipynb`**: Exploratory Data Analysis to uncover insights from the data.
-- **`regression.py`**: Scripts to train, tune, and evaluate regression models 
-- **`classification.py`**: Scripts to train, tune, and evaluate classification models 
-- **`utils.py`**: Utility functions for data handling and model management.
-- **`models/`**: Directory containing trained models and their metrics for easy access and reproducibility.
+- Python
+- NumPy
+- Pandas
+- PyTorch
+- Scikit-learn
+- XGBoost
+- TensorBoard
 
-## Models Developed
-- **Linear Regression**: For baseline predictions of listing prices.
-- **Decision Trees and Random Forest**: For more complex regression tasks with structured decision making.
-- **Gradient Boosting**: To improve predictions through ensemble learning.
-- **Classification Models**: For determining the category of listings, optimized with hyperparameter tuning.
+## Models Implemented
 
-## Key Technologies
-- **Python**: The primary programming language used.
-- **Pandas & NumPy**: For data manipulation and numerical operations.
-- **Scikit-learn**: For implementing machine learning algorithms.
-- **Matplotlib & Seaborn**: For creating visualizations.
-- **Joblib**: For model persistence.
+### Classification
+- Logistic Regression
+- Decision Trees
+- Random Forest
+- Gradient Boosting
+- XGBoost
 
-## How to Use
-To run this project locally:
-1. Clone the repository:
+### Regression
+- Linear Regression
+- Decision Trees
+- Random Forest
+- Gradient Boosting
 
+### Neural Network
+- Custom PyTorch implementation
+
+## Key Features
+
+- Comprehensive model comparison for both classification and regression tasks
+- Hyperparameter tuning
+- Model evaluation and metrics tracking
+- Neural network implementation with PyTorch
+- TensorBoard integration for visualizing training progress
+
+## Getting Started
+
+1. Clone this repository
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run the Jupyter notebooks or Python scripts to train and evaluate models
+
+## Results
+
+While the performance metrics may not be impressive due to the artificial nature of the dataset, this project demonstrates the ability to:
+
+- Implement various machine learning algorithms
+- Perform data preprocessing and feature engineering
+- Conduct model evaluation and comparison
+- Utilize popular data science and machine learning libraries
+
+For detailed results and visualizations, please refer to the Jupyter notebooks and the `docs_photos/` directory.
+
+## Future Improvements
+
+- Apply these techniques to real-world datasets
+- Implement more advanced feature engineering techniques
+- Explore ensemble methods and model stacking
+- Extend the neural network architecture for more complex tasks
+
+## Contact
+
+For any questions or feedback, please contact [Your Name] at [your.email@example.com].
