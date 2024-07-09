@@ -8,6 +8,9 @@ import joblib
 import json
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+import yaml
+import torch
+from datetime import datetime
 
 
 def remove_rows_with_missing_ratings(df):
@@ -142,25 +145,43 @@ def load_data_all_steps(path, classifier=False, features=None, label="Price_Nigh
 def save_model(
     model, model_name, metrics, model_type, hyperparameters=None, task_folder="models/"
 ):
-    # Validate model_type and set the folder path
-    if model_type not in ["regression", "classification"]:
-        raise ValueError("model_type must be 'regression' or 'classification'")
+    if isinstance(model, torch.nn.Module):
+        folder = os.path.join(task_folder, "neural_networks", "regression")
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        model_folder = os.path.join(folder, timestamp)
+    else:
+        folder = os.path.join(task_folder, model_type)
+        model_folder = os.path.join(folder, model_name)
 
-    folder = os.path.join(task_folder, model_type)
-
-    # Create directory if it does not exist
-    model_folder = os.path.join(folder, model_name)
     os.makedirs(model_folder, exist_ok=True)
 
-    # Paths for the files
-    model_path = os.path.join(model_folder, f"{model_name}.joblib")
-    hyperparameters_path = os.path.join(
-        model_folder, f"{model_name}_hyperparameters.json"
-    )
-    metrics_path = os.path.join(model_folder, f"{model_name}_metrics.json")
+    if isinstance(model, torch.nn.Module):
+        # Save PyTorch model
+        model_path = os.path.join(model_folder, "model.pt")
+        torch.save(model.state_dict(), model_path)
 
-    # Save the model
-    joblib.dump(model, model_path)
+        # Calculate additional metrics for PyTorch model
+        train_loader = metrics.get("train_loader")
+        val_loader = metrics.get("val_loader")
+        test_loader = metrics.get("test_loader")
+
+        if train_loader and val_loader and test_loader:
+            additional_metrics = calculate_additional_metrics(
+                model, train_loader, val_loader, test_loader
+            )
+            metrics.update(additional_metrics)
+
+        # Remove data loaders from metrics as they're not JSON serializable
+        metrics.pop("train_loader", None)
+        metrics.pop("val_loader", None)
+        metrics.pop("test_loader", None)
+    else:
+        # Save scikit-learn model
+        model_path = os.path.join(model_folder, f"{model_name}.joblib")
+        joblib.dump(model, model_path)
+
+    hyperparameters_path = os.path.join(model_folder, "hyperparameters.json")
+    metrics_path = os.path.join(model_folder, "metrics.json")
 
     # Save hyperparameters if they exist
     if hyperparameters is not None:
@@ -177,7 +198,7 @@ def save_model(
     with open(metrics_path, "w") as metrics_file:
         json.dump(metrics, metrics_file, indent=4)
 
-    print(f"Model and associated data saved in {folder} under the name {model_name}")
+    print(f"Model and associated data saved in {model_folder}")
 
 
 def save_data_splits(
@@ -213,6 +234,12 @@ def convert_np_to_python(data):
     elif isinstance(data, list):
         return [convert_np_to_python(v) for v in data]
     return data
+
+
+def get_nn_config(path: str = "./nn_config.yaml") -> dict:
+    with open(path, "r") as file:
+        creds = yaml.safe_load(file)
+        return creds
 
 
 if __name__ == "__main__":
