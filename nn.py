@@ -7,6 +7,9 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from utils import get_nn_config
+from datetime import datetime
+from sklearn.metrics import mean_squared_error, r2_score
+import time
 
 writer = SummaryWriter("runs/AIRBNB_NN")
 
@@ -107,7 +110,7 @@ class AirbnbNN(nn.Module):
 
 
 num_features = 11
-model = AirbnbNN(num_features)
+model = AirbnbNN(num_features, config=True)
 
 
 train_dataset = AirbnbNightlyPriceRegressionDataset(
@@ -122,13 +125,21 @@ val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 
+import time
+import torch
+import torch.nn as nn
+
+
 def train(model, train_loader, val_loader, num_epochs=10, writer=None):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
 
+    total_start_time = time.time()  # Start timing for the entire training process
+
     for epoch in range(num_epochs):
         model.train()  # Set the model to training mode
         running_loss = 0.0
+        epoch_start_time = time.time()  # Start timing for this epoch
 
         for features, labels in train_loader:
             optimizer.zero_grad()  # Zero the gradients
@@ -136,17 +147,18 @@ def train(model, train_loader, val_loader, num_epochs=10, writer=None):
             loss = criterion(
                 outputs, labels.unsqueeze(1)
             )  # Ensure label dimensions match output
-
             loss.backward()  # Backpropagate the loss
             optimizer.step()  # Update model parameters
-
             running_loss += loss.item()  # Accumulate loss
 
         avg_train_loss = running_loss / len(
             train_loader
         )  # Calculate average loss for the epoch
-        # print(f"Epoch {epoch+1}/{num_epochs}, Training Loss: {avg_train_loss:.4f}")
+        epoch_end_time = time.time()
+        epoch_duration = epoch_end_time - epoch_start_time
+
         writer.add_scalar("Loss/Train", avg_train_loss, epoch)  # Log training loss
+        writer.add_scalar("Time/Epoch", epoch_duration, epoch)  # Log epoch duration
 
         # Validation phase
         model.eval()  # Set the model to evaluation mode
@@ -160,15 +172,62 @@ def train(model, train_loader, val_loader, num_epochs=10, writer=None):
         avg_val_loss = val_loss / len(
             val_loader
         )  # Calculate average validation loss for the epoch
-        # print(f"Epoch {epoch+1}/{num_epochs}, Validation Loss: {avg_val_val_loss:.4f}")
         writer.add_scalar("Loss/Validation", avg_val_loss, epoch)  # Log validation loss
+
         print(
-            f"Epoch {epoch+1}/{num_epochs}, Training Loss: {avg_train_loss:.4f}, Validation Loss: {avg_val_loss:.4f}"
+            f"Epoch {epoch+1}/{num_epochs}, Training Loss: {avg_train_loss:.4f}, "
+            f"Validation Loss: {avg_val_loss:.4f}, Epoch Time: {epoch_duration:.2f}s"
         )
 
-    print("Finished Training")
+    total_end_time = time.time()
+    total_training_duration = total_end_time - total_start_time
+
+    print(f"Finished Training. Total training time: {total_training_duration:.2f}s")
+
+    return (
+        model,
+        total_training_duration,
+    )  # Return both the model and the total training duration
 
 
-# Call train function with the model, training DataLoader, and number of epochs
-train(model, train_loader, val_loader, num_epochs=100, writer=writer)
-writer.close()
+# # Usage:
+# model, training_duration = train(model, train_loader, val_loader, num_epochs=100, writer=writer)
+
+
+def calculate_additional_metrics(model, train_loader, val_loader, test_loader):
+    model.eval()
+    additional_metrics = {}
+
+    for name, loader in [
+        ("train", train_loader),
+        ("val", val_loader),
+        ("test", test_loader),
+    ]:
+        y_true, y_pred = [], []
+        total_time = 0
+        num_samples = 0
+
+        with torch.no_grad():
+            for features, labels in loader:
+                start_time = time.time()
+                outputs = model(features)
+                end_time = time.time()
+
+                total_time += end_time - start_time
+                num_samples += features.size(0)
+
+                y_true.extend(labels.numpy())
+                y_pred.extend(outputs.squeeze().numpy())
+
+        y_true = np.array(y_true)
+        y_pred = np.array(y_pred)
+
+        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+        r2 = r2_score(y_true, y_pred)
+
+        additional_metrics[f"{name}_RMSE_loss"] = float(rmse)
+        additional_metrics[f"{name}_R_squared"] = float(r2)
+
+    additional_metrics["inference_latency"] = total_time / num_samples
+
+    return additional_metrics
