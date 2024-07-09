@@ -6,10 +6,12 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
-from utils import get_nn_config
+from utils import get_nn_config, save_model
 from datetime import datetime
 from sklearn.metrics import mean_squared_error, r2_score
 import time
+import itertools
+import random
 
 writer = SummaryWriter("runs/AIRBNB_NN")
 
@@ -57,7 +59,14 @@ class AirbnbNightlyPriceRegressionDataset(Dataset):
 
 class AirbnbNN(nn.Module):
     def __init__(
-        self, num_features, hidden_layer_width=128, output_dim=1, config=False
+        self,
+        num_features,
+        hidden_layer_width=128,
+        output_dim=1,
+        depth=2,
+        learning_rate=0.001,
+        optimizer="Adam",
+        config=False,
     ):
         """
         Initialize the neural network with the option to override hyperparameters
@@ -231,3 +240,100 @@ def calculate_additional_metrics(model, train_loader, val_loader, test_loader):
     additional_metrics["inference_latency"] = total_time / num_samples
 
     return additional_metrics
+
+
+def generate_nn_configs(num_configs=16):
+    configs = []
+
+    # Define ranges for hyperparameters
+    hidden_layer_widths = [64, 128, 256]
+    depths = [2, 3, 4]
+    learning_rates = [0.001, 0.01, 0.1]
+    optimizers = ["adam", "sgd"]
+
+    # Generate all combinations
+    all_combinations = list(
+        itertools.product(hidden_layer_widths, depths, learning_rates, optimizers)
+    )
+
+    # Randomly sample if there are more combinations than requested configs
+    if len(all_combinations) > num_configs:
+        configs = random.sample(all_combinations, num_configs)
+    else:
+        configs = all_combinations
+
+    # Convert to dictionaries
+    config_dicts = []
+    for config in configs:
+        config_dict = {
+            "hidden_layer_width": config[0],
+            "depth": config[1],
+            "learning_rate": config[2],
+            "optimizer": config[3],
+            "output_dim": 1,  # Assuming this is fixed for your regression task
+        }
+        config_dicts.append(config_dict)
+
+    return config_dicts
+
+
+def find_best_nn(num_configs=16, num_epochs=100):
+    configs = generate_nn_configs(num_configs)
+    best_model = None
+    best_metrics = None
+    best_hyperparameters = None
+    best_performance = float("inf")  # Assuming lower is better (e.g., MSE)
+
+    for i, config in enumerate(configs):
+        print(f"Training model {i+1}/{num_configs}")
+
+        # Create model with current config
+        model = AirbnbNN(num_features=11, **config)
+
+        # Train model
+        trained_model, training_duration = train(
+            model, train_loader, val_loader, num_epochs=num_epochs, writer=writer
+        )
+
+        # Evaluate model
+        metrics = calculate_additional_metrics(
+            trained_model, train_loader, val_loader, test_loader
+        )
+        metrics["training_duration"] = training_duration
+
+        # Save current model
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        save_model(
+            trained_model,
+            f"nn_model_{i+1}_{timestamp}",
+            metrics,
+            "neural_network",
+            config,
+        )
+
+        # Check if this model is the best so far
+        if metrics["val_RMSE_loss"] < best_performance:
+            best_model = trained_model
+            best_metrics = metrics
+            best_hyperparameters = config
+            best_performance = metrics["val_RMSE_loss"]
+
+    # Save the best model in a separate folder
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    save_model(
+        best_model,
+        f"best_nn_model_{timestamp}",
+        best_metrics,
+        "neural_network",
+        best_hyperparameters,
+    )
+
+    return best_model, best_metrics, best_hyperparameters
+
+
+# # Usage
+# best_model, best_metrics, best_hyperparameters = find_best_nn()
+
+if __name__ == "__main__":
+    generate_nn_configs()
+    find_best_nn()
