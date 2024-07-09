@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
+from utils import get_nn_config
 
 writer = SummaryWriter("runs/AIRBNB_NN")
 
@@ -54,21 +55,54 @@ class AirbnbNightlyPriceRegressionDataset(Dataset):
 class AirbnbNN(nn.Module):
     def __init__(
         self, num_features, hidden_layer_width=128, output_dim=1, config=False
-    ):  # update config Parameter to enable hyperparameters to be extracted from the yaml file.
-        super().__init__()
-        # Define layers
-        self.fc1 = nn.Linear(
-            num_features, hidden_layer_width
-        )  # Input to first hidden layer
-        self.fc2 = nn.Linear(
-            hidden_layer_width, hidden_layer_width
-        )  # Second hidden layer
-        self.output = nn.Linear(hidden_layer_width, output_dim)  # Output layer
+    ):
+        """
+        Initialize the neural network with the option to override hyperparameters
+        using a configuration file.
+
+        Args:
+        num_features (int): Number of input features.
+        hidden_layer_width (int, optional): Width of the hidden layers.
+        output_dim (int, optional): Dimension of the output layer.
+        config (bool, optional): If True, overrides default parameters with those from get_nn_config.
+        """
+        super(AirbnbNN, self).__init__()
+
+        if config:
+            creds = get_nn_config()
+            hidden_layer_width = creds.get("hidden_layer_width", hidden_layer_width)
+            output_dim = creds.get("output_dim", output_dim)
+            self.depth = creds.get("depth", 2)
+            self.optimiser = creds.get("optimiser", "adam")
+            self.learning_rate = creds.get("learning_rate", 0.001)
+        else:
+            # Set default values if config is not used
+            self.hidden_layer_number = 2
+            self.optimiser = "adam"
+            self.learning_rate = 0.001
+
+        # Define layers dynamically based on hidden_layer_number
+        layers = []
+        previous_layer_size = num_features
+        for _ in range(self.hidden_layer_number):
+            layers.append(nn.Linear(previous_layer_size, hidden_layer_width))
+            layers.append(nn.ReLU())
+            previous_layer_size = hidden_layer_width
+
+        layers.append(nn.Linear(hidden_layer_width, output_dim))
+        self.model = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))  # Activation function for hidden layer 1
-        x = F.relu(self.fc2(x))  # Activation function for hidden layer 2
-        x = self.output(x)  # Linear output
+        """
+        Forward pass through the network.
+
+        Args:
+        x (Tensor): Input tensor.
+
+        Returns:
+        Tensor: Output of the network.
+        """
+        x = self.model(x)
         return x
 
 
