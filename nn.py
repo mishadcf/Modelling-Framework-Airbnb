@@ -66,7 +66,7 @@ class AirbnbNN(nn.Module):
         output_dim (int, optional): Dimension of the output layer.
         config (bool, optional): If True, overrides default parameters with those from get_nn_config.
         """
-        super(AirbnbNN, self).__init__()
+        super().__init__()
 
         if config:
             creds = get_nn_config()
@@ -77,14 +77,14 @@ class AirbnbNN(nn.Module):
             self.learning_rate = creds.get("learning_rate", 0.001)
         else:
             # Set default values if config is not used
-            self.hidden_layer_number = 2
+            self.depth = 2
             self.optimiser = "adam"
             self.learning_rate = 0.001
 
         # Define layers dynamically based on hidden_layer_number
         layers = []
         previous_layer_size = num_features
-        for _ in range(self.hidden_layer_number):
+        for _ in range(self.depth):
             layers.append(nn.Linear(previous_layer_size, hidden_layer_width))
             layers.append(nn.ReLU())
             previous_layer_size = hidden_layer_width
